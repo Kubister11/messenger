@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "2.3.21"
     `java-library`
     `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "dev.kubister11"
@@ -39,20 +40,35 @@ tasks.test {
     useJUnitPlatform()
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            pom {
-                name.set("messenger")
-                description.set("Transport-agnostic pub/sub and request/response messaging for the JVM (Redis, NATS).")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+
+    coordinates(group.toString(), "messenger", version.toString())
+
+    pom {
+        name = "messenger"
+        description = "Transport-agnostic pub/sub and request/response messaging for the JVM (Redis, NATS)."
+        url = "https://github.com/Kubister11/messenger"
+
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
             }
+        }
+
+        developers {
+            developer {
+                id.set("Kubister11")
+                name.set("Kubister11")
+                email.set("llukaszewicz.jakub@gmail.com")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/Kubister11/messenger")
+            connection.set("scm:git:git://github.com/Kubister11/messenger.git")
         }
     }
 }
