@@ -20,15 +20,23 @@ object MessengerFory {
      *        every peer on the broker is fully trusted, as it is a remote-code-execution vector
      *        otherwise.
      * @param configure hook to register your own message classes, e.g. `{ it.register(MyMsg::class.java) }`.
+     * @param classLoader classloader used to resolve message classes named in the payload. Defaults to
+     *        this library's own classloader. **Must** be set to a loader that can see the message
+     *        classes when the calling thread's context classloader cannot (e.g. Minecraft plugin
+     *        environments, where the context classloader is the system loader but message classes live
+     *        in a plugin/platform loader). Otherwise Fory captures the thread context classloader at
+     *        build time and name-based deserialization fails with [ClassNotFoundException].
      */
     fun create(
         requireClassRegistration: Boolean = false,
+        classLoader: ClassLoader = MessengerFory::class.java.classLoader,
         configure: (ThreadSafeFory) -> Unit = {}
     ): ThreadSafeFory {
         val fory = ForyKotlin.builder()
             .withXlang(false)
             .requireClassRegistration(requireClassRegistration)
             .withRefTracking(true)
+            .withClassLoader(classLoader)
             .buildThreadSafeFory()
 
         fory.register(CallbackMessage::class.java)
