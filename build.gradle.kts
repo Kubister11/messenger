@@ -25,6 +25,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.nats:jnats:2.25.3")
     testImplementation("org.redisson:redisson:4.5.0")
+    testImplementation("io.netty:netty-buffer:4.1.118.Final")
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
 }
 
@@ -38,6 +39,11 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = false
+    }
 }
 
 mavenPublishing {
