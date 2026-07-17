@@ -18,7 +18,11 @@ import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
 /**
@@ -63,6 +67,24 @@ abstract class MessagingService : AutoCloseable {
     }
 
     val requests: MutableMap<UUID, CompletableFuture<Any?>> = ConcurrentHashMap()
+
+    /**
+     * Executor used to complete [request] futures.
+     *
+     * Completing them directly on the transport's delivery thread would run dependent
+     * continuations (`thenAccept`, `thenApply`, ...) on that thread — if any of them blocks
+     * waiting for another message (e.g. `request(...).join()`), delivery stops and the wait
+     * deadlocks until it times out. A cached pool keeps blocking continuations off the
+     * delivery thread.
+     */
+    internal val callbackExecutor: ExecutorService = Executors.newCachedThreadPool(
+        object : ThreadFactory {
+            private val counter = AtomicInteger()
+            override fun newThread(runnable: Runnable): Thread =
+                Thread(runnable, "messenger-callback-${this.counter.incrementAndGet()}")
+                    .apply { isDaemon = true }
+        }
+    )
 
     abstract fun ready(): Boolean
 
@@ -143,5 +165,6 @@ abstract class MessagingService : AutoCloseable {
             iterator.remove()
         }
         this.disconnect()
+        this.callbackExecutor.shutdown()
     }
 }
