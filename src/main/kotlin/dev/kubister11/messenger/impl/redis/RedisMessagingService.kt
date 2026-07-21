@@ -81,7 +81,7 @@ class RedisMessagingService(
     ) {
         if (!this.ready()) error("Redis client not initialized")
 
-        val redisListener = RedisMessageListener(listener)
+        val redisListener = RedisMessageListener(listener, this.callbackExecutor)
         this.client.getTopic(this.scopedChannel(channel, scope)).addListener(clazz.java, redisListener)
     }
 
