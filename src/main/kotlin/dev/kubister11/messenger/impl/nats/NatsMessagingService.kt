@@ -86,18 +86,21 @@ class NatsMessagingService(
 
     private fun handle(message: Message) {
         val subscriptions = this.listeners[message.subject] ?: return
-        val packet = try {
-            this.fory.deserialize(message.data)
-        } catch (throwable: Throwable) {
-            logger.warn("Failed to deserialize message on subject {}", message.subject, throwable)
-            return
-        } ?: return
 
-        for (subscription in subscriptions) {
-            try {
-                subscription.deliver(packet)
+        this.callbackExecutor.execute {
+            val packet = try {
+                this.fory.deserialize(message.data)
             } catch (throwable: Throwable) {
-                logger.error("Listener on subject {} threw", message.subject, throwable)
+                logger.warn("Failed to deserialize message on subject {}", message.subject, throwable)
+                return@execute
+            } ?: return@execute
+
+            for (subscription in subscriptions) {
+                try {
+                    subscription.deliver(packet)
+                } catch (throwable: Throwable) {
+                    logger.error("Listener on subject {} threw", message.subject, throwable)
+                }
             }
         }
     }

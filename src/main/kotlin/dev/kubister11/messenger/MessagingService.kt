@@ -69,13 +69,17 @@ abstract class MessagingService : AutoCloseable {
     val requests: MutableMap<UUID, CompletableFuture<Any?>> = ConcurrentHashMap()
 
     /**
-     * Executor used to complete [request] futures.
+     * Executor used to complete [request] futures and, by transport implementations, to run
+     * message delivery itself.
      *
-     * Completing them directly on the transport's delivery thread would run dependent
+     * Completing futures directly on the transport's delivery thread would run dependent
      * continuations (`thenAccept`, `thenApply`, ...) on that thread — if any of them blocks
      * waiting for another message (e.g. `request(...).join()`), delivery stops and the wait
-     * deadlocks until it times out. A cached pool keeps blocking continuations off the
-     * delivery thread.
+     * deadlocks until it times out. Transports (NATS' single dispatcher thread, Redisson's small
+     * fixed pool) are just as vulnerable to being clogged by ordinary listener work under heavy
+     * traffic, which is why they route delivery through this executor too. A cached pool keeps
+     * both off the delivery thread and grows with load instead of capping throughput at the
+     * transport's thread count.
      */
     internal val callbackExecutor: ExecutorService = Executors.newCachedThreadPool(
         object : ThreadFactory {
